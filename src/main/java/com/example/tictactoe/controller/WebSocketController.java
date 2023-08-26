@@ -2,16 +2,16 @@ package com.example.tictactoe.controller;
 
 import com.example.tictactoe.Exceptions.InvalidMoveException;
 import com.example.tictactoe.classes.TicTacToeGame;
-import com.example.tictactoe.model.BoardCell;
-import com.example.tictactoe.model.Game;
-import com.example.tictactoe.model.MoveRequest;
-import com.example.tictactoe.model.MoveResponse;
+import com.example.tictactoe.model.*;
 import com.example.tictactoe.service.GameService;
+import com.example.tictactoe.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
@@ -20,46 +20,43 @@ public class WebSocketController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final GameService gameService;
-
-    public WebSocketController(SimpMessagingTemplate messagingTemplate, GameService gameService) {
+    private final UserService userService;
+    public WebSocketController(SimpMessagingTemplate messagingTemplate, GameService gameService,UserService userService) {
         this.messagingTemplate = messagingTemplate;
         this.gameService = gameService;
+        this.userService=userService;
     }
 
     @MessageMapping("/game/{id}/move")
     @SendTo("/topic/game/{id}")
-    public MoveResponse makeMove(@DestinationVariable Long id, MoveRequest moveRequest) {
+    public Game makeMove(@DestinationVariable Long id, MoveRequest moveRequest, Authentication authentication) {
+        String authenticatedUsername = authentication.getName();
+        return gameService.makeMove(id, moveRequest,authenticatedUsername);
+    }
+    @MessageMapping("/connect")
+    public void connectUser(@Payload String username) {
+       userService.setUserOnlineStatus(username, true);
+    }
 
-        Game game = gameService.getGame(id);
-        List<BoardCell> boardList = game.getBoard();
-        char currentPlayer = game.getCurrentPlayer();
+    @MessageMapping("/disconnect")
+    public void disconnectUser(@Payload String username) {
+       userService.setUserOnlineStatus(username, false);
+    }
+    @MessageMapping("/invite")
+    public void sendGameInvitation(GameInvitationRequest invitationRequest) {
+        Long gameId = invitationRequest.getGameId();
+        String inviter = invitationRequest.getInviter();
+        String invitedUser = invitationRequest.getInvitedUser();
 
-        char[][] boardArray = convertListToArray(boardList);
-        TicTacToeGame ticTacToeGame = new TicTacToeGame();
-        ticTacToeGame.setBoard(boardArray);
-        ticTacToeGame.setCurrentPlayer(currentPlayer);
+        if (userService.isUserOnline(invitedUser)) {
+            Game game = gameService.UpdateGame(gameId, inviter, invitedUser);
+            messagingTemplate.convertAndSend("/topic/game/" + gameId, game);
 
-        try {
-            MoveResponse moveResponse = ticTacToeGame.makeMove(moveRequest);
-            game.updateGameState(moveResponse.getBoard(), moveResponse.getCurrentPlayer(), moveResponse.isGameOver(), moveResponse.getWinner());
-            gameService.saveGame(game);
+            String invitationMessage = "You have been invited to a game by " + inviter;
+            messagingTemplate.convertAndSendToUser(invitedUser, "/queue/invitations", invitationMessage);
+        } else {
 
-            messagingTemplate.convertAndSend("/topic/game/" + id, moveResponse);
-            return moveResponse;
-        } catch (InvalidMoveException e) {
-
-            throw new RuntimeException("Invalid move: " + e.getMessage());
         }
     }
-    private char[][] convertListToArray(List<BoardCell> boardCells) {
-        char[][] boardArray = new char[3][3];
-        int index = 0;
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                boardArray[i][j] = boardCells.get(index).getCellValue();
-                index++;
-            }
-        }
-        return boardArray;
-    }
+
 }

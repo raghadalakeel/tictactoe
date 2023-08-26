@@ -15,35 +15,39 @@ public class TicTacToeGame {
     private boolean gameOver;
     private char winner;
 
-    public TicTacToeGame() {
-        board = new char[3][3]; // Initialize the board with empty cells
-        currentPlayer = 'X'; // Player 'X' starts
+    public TicTacToeGame(char current) {
+        board = new char[3][3];
+        currentPlayer = 'X';
         gameOver = false;
-        winner = '\0'; // No winner initially
+        winner = '\0';
     }
 
-    public MoveResponse makeMove(MoveRequest move) {
+    public MoveResponse makeMove(MoveRequest move, String authenticatedUsername) {
+//        if (!currentPlayer.equals(authenticatedUsername)) {
+//            throw new InvalidMoveException("It's not your turn.");
+//        }
+
         int row = move.getRow();
         int col = move.getCol();
-         if(gameOver){
-             throw new GameOverException("The game is over");
-         }
-        if ( row < 0 || row >= 3 || col < 0 || col >= 3 || board[row][col] != '\0') {
-             throw new InvalidMoveException("Invalid move");
+
+        if (gameOver) {
+            throw new GameOverException("The game is over");
+        }
+
+        if (row < 0 || row >= 3 || col < 0 || col >= 3 || board[row][col] != '\0') {
+            throw new InvalidMoveException("Invalid move");
         }
 
         board[row][col] = currentPlayer;
-          // to make it a linked list
         List<BoardCell> boardCells = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {  //row
-            for (int j = 0; j < 3; j++) { // column
-                BoardCell cell = new BoardCell();// the object of that list
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                BoardCell cell = new BoardCell();
                 cell.setCellValue(board[i][j]);
-                boardCells.add(cell); // the whole list
+                boardCells.add(cell);
             }
         }
 
-        // Checking for winning conditions
         if (checkForWin()) {
             gameOver = true;
             winner = currentPlayer;
@@ -51,11 +55,10 @@ public class TicTacToeGame {
             gameOver = true;
         }
 
-        currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
+        currentPlayer = currentPlayer==('X') ? 'O' : 'X';
 
         return new MoveResponse(boardCells, currentPlayer, gameOver, winner);
     }
-
 
 
     ////////////////////////
@@ -103,37 +106,24 @@ public class TicTacToeGame {
         return true;
     }
 
-
-    ///////////
-
     public char[][] getBoardState() {
         return board;
     }
 
-
-    ///////////////
     public boolean isGameOver() {
         return gameOver;
     }
 
-
-
-
-    //////////////////
     public char getWinner() {
         return winner;
     }
 
-
-    ///////////////////
-    public char getCurrentPlayer() {
-        return currentPlayer;
-    }
-
-    ///////////////////////
-
     public void setBoard(char[][] board) {
         this.board = board;
+    }
+
+    public char getCurrentPlayer() {
+        return currentPlayer;
     }
 
     public void setCurrentPlayer(char currentPlayer) {
@@ -148,7 +138,6 @@ public class TicTacToeGame {
         this.winner = winner;
     }
 
-    // Reset the game to its initial state
     public void resetGame() {
         board = new char[3][3];
         currentPlayer = 'X';

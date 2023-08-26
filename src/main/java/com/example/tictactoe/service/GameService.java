@@ -2,13 +2,15 @@ package com.example.tictactoe.service;
 
 import com.example.tictactoe.Exceptions.GameNotFoundException;
 import com.example.tictactoe.Exceptions.InvalidMoveException;
+import com.example.tictactoe.Exceptions.UserNotFoundException;
 import com.example.tictactoe.Repository.GameRepository;
+import com.example.tictactoe.Repository.UserRepository;
 import com.example.tictactoe.classes.TicTacToeGame;
-import com.example.tictactoe.model.BoardCell;
-import com.example.tictactoe.model.Game;
-import com.example.tictactoe.model.MoveRequest;
-import com.example.tictactoe.model.MoveResponse;
+import com.example.tictactoe.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -17,14 +19,21 @@ import java.util.Optional;
 @Service
 public class GameService {
     private final GameRepository gameRepository;
-
+    private final UserRepository userRepository;
     @Autowired
-    public GameService(GameRepository gameRepository) {
+    public GameService(GameRepository gameRepository,UserRepository userRepository) {
         this.gameRepository = gameRepository;
+        this.userRepository=userRepository;
     }
     //new
-    public Game startNewGame() {
+    public Game startNewGame(String playerXUsername) {
+        User playerX = userRepository.findByUserName(playerXUsername);
+
+
         Game newGame = new Game();
+        newGame.setPlayerX(playerX);
+        newGame.setCurrentPlayer('X');
+
         List<BoardCell> boardCells = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -38,9 +47,29 @@ public class GameService {
         gameRepository.save(newGame);
         return newGame;
     }
+    public Game joinGame(Long gameId, String playerOUsername) {
+        User playerO = userRepository.findByUserName(playerOUsername);
+
+
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new GameNotFoundException("Game not found"));
+
+        if (game.getPlayerO() != null) {
+            throw new GameNotFoundException("Game has already started");
+        }
+
+        game.setPlayerO(playerO);
+        game.setActive(true);
+
+        return gameRepository.save(game);
+    }
+
+
+
 
     //handle moves
-    public Game makeMove(Long id, MoveRequest moveRequest) {
+    public Game makeMove(Long id, MoveRequest moveRequest,String authenticatedUsername) {
+
         Optional<Game> optionalGame = gameRepository.findById(id);
         if (optionalGame.isEmpty()) {
             throw new GameNotFoundException("Game not found");
@@ -52,12 +81,12 @@ public class GameService {
 
         char[][] boardArray = convertListToArray(boardCells);
 
-        TicTacToeGame ticTacToeGame = new TicTacToeGame();
+        TicTacToeGame ticTacToeGame = new TicTacToeGame(currentPlayer);
         ticTacToeGame.setBoard(boardArray);
-        ticTacToeGame.setCurrentPlayer(currentPlayer);
+
 
         try {
-            MoveResponse moveResponse = ticTacToeGame.makeMove(moveRequest);
+            MoveResponse moveResponse = ticTacToeGame.makeMove(moveRequest,authenticatedUsername);
 
             updateBoardCells(game, moveResponse.getBoard());
             game.setCurrentPlayer(moveResponse.getCurrentPlayer());
@@ -104,5 +133,20 @@ public class GameService {
 }
     public void saveGame(Game game) {
   gameRepository.save(game);
+    }
+
+
+    public Game UpdateGame(Long gameId, String inviterUsername, String invitedUsername) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new GameNotFoundException("Game not found"));
+        User inviter = userRepository.findByUserName(inviterUsername);
+        User invitedUser = userRepository.findByUserName(invitedUsername);
+
+        game.setPlayerX(inviter);
+        game.setPlayerO(invitedUser);
+        game.setCurrentPlayer('X');
+
+
+        return gameRepository.save(game);
     }
 }
