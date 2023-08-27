@@ -29,6 +29,7 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private List<Role> roles;
+    @Column(name = "online")
     private boolean isOnline;
 
 

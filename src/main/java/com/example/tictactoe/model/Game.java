@@ -37,12 +37,12 @@ public class Game {
     private boolean gameOver;
     private char winner;
     private boolean active;
-    public void updateGameState(List<BoardCell> board, char currentPlayer, boolean gameOver, char winner) {
-        this.board = board;
-        this.currentPlayer = currentPlayer;
-        this.gameOver = gameOver;
-        this.winner = winner;
-    }
+//    public void updateGameState(List<BoardCell> board, char currentPlayer, boolean gameOver, char winner) {
+//        this.board = board;
+//        this.currentPlayer = currentPlayer;
+//        this.gameOver = gameOver;
+//        this.winner = winner;
+//    }
 
 
 }

@@ -1,8 +1,6 @@
 package com.example.tictactoe.service;
 
-import com.example.tictactoe.Exceptions.GameNotFoundException;
-import com.example.tictactoe.Exceptions.InvalidMoveException;
-import com.example.tictactoe.Exceptions.UserNotFoundException;
+import com.example.tictactoe.Exceptions.*;
 import com.example.tictactoe.Repository.GameRepository;
 import com.example.tictactoe.Repository.UserRepository;
 import com.example.tictactoe.classes.TicTacToeGame;
@@ -47,15 +45,14 @@ public class GameService {
         gameRepository.save(newGame);
         return newGame;
     }
+    ////
     public Game joinGame(Long gameId, String playerOUsername) {
         User playerO = userRepository.findByUserName(playerOUsername);
-
-
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new GameNotFoundException("Game not found"));
 
         if (game.getPlayerO() != null) {
-            throw new GameNotFoundException("Game has already started");
+            throw new GameAlreadyStartedException("Game has already started");
         }
 
         game.setPlayerO(playerO);
@@ -75,7 +72,12 @@ public class GameService {
             throw new GameNotFoundException("Game not found");
         }
 
+
         Game game = optionalGame.get();
+        if(!game.isActive()){
+            throw new GameNotActiveException("Game is not active");
+        }
+
         List<BoardCell> boardCells = game.getBoard();
         char currentPlayer = game.getCurrentPlayer();
 
@@ -87,7 +89,7 @@ public class GameService {
 
         try {
             MoveResponse moveResponse = ticTacToeGame.makeMove(moveRequest,authenticatedUsername);
-
+              //check
             updateBoardCells(game, moveResponse.getBoard());
             game.setCurrentPlayer(moveResponse.getCurrentPlayer());
             game.setGameOver(moveResponse.isGameOver());
@@ -145,7 +147,7 @@ public class GameService {
         game.setPlayerX(inviter);
         game.setPlayerO(invitedUser);
         game.setCurrentPlayer('X');
-
+     //active?
 
         return gameRepository.save(game);
     }

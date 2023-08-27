@@ -38,20 +38,16 @@ public class UserService {
         return user.isOnline();
     }
 
-    private Set<User> onlineUsers = new HashSet<>();
+
 
     public List<User> getOnlinePlayers() {
-        return onlineUsers.stream().collect(Collectors.toList());
+        List<User> users =userRepository.findAllByIsOnlineTrue();
+        return users;
     }
 
     public void setUserOnlineStatus(String username, boolean isOnline) {
         User user = userRepository.findByUserName(username);
+        user.setOnline(isOnline);
 
-
-        if (isOnline) {
-            onlineUsers.add(user);
-        } else {
-            onlineUsers.remove(user);
-        }
     }
 }

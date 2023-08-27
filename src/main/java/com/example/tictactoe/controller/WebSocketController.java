@@ -14,7 +14,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 @Controller
 public class WebSocketController {
 
@@ -33,6 +36,7 @@ public class WebSocketController {
         String authenticatedUsername = authentication.getName();
         return gameService.makeMove(id, moveRequest,authenticatedUsername);
     }
+
     @MessageMapping("/connect")
     public void connectUser(@Payload String username) {
        userService.setUserOnlineStatus(username, true);
@@ -42,6 +46,7 @@ public class WebSocketController {
     public void disconnectUser(@Payload String username) {
        userService.setUserOnlineStatus(username, false);
     }
+
     @MessageMapping("/invite")
     public void sendGameInvitation(GameInvitationRequest invitationRequest) {
         Long gameId = invitationRequest.getGameId();
@@ -52,11 +57,16 @@ public class WebSocketController {
             Game game = gameService.UpdateGame(gameId, inviter, invitedUser);
             messagingTemplate.convertAndSend("/topic/game/" + gameId, game);
 
-            String invitationMessage = "You have been invited to a game by " + inviter;
-            messagingTemplate.convertAndSendToUser(invitedUser, "/queue/invitations", invitationMessage);
-        } else {
 
+            String invitationMessage = "You have been invited to a game by " + inviter;
+            Map<String, Object> invitationPayload = new HashMap<>();
+            invitationPayload.put("message", invitationMessage);
+            invitationPayload.put("gameId", gameId);
+            messagingTemplate.convertAndSendToUser(invitedUser, "/queue/invitations", invitationPayload);
+        } else {
+            // Handle user not online case
         }
     }
+
 
 }

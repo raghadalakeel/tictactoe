@@ -1,5 +1,6 @@
 package com.example.tictactoe.controller;
 
+import com.example.tictactoe.Exceptions.GameAlreadyStartedException;
 import com.example.tictactoe.Exceptions.GameNotFoundException;
 import com.example.tictactoe.Exceptions.InvalidMoveException;
 import com.example.tictactoe.Repository.GameRepository;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 @RestController
 @RequestMapping("/api/game")
@@ -58,6 +60,8 @@ public class GameController {
         }
     }
 
+
+
     @PostMapping("/join")
     public ResponseEntity<?> joinGame(@RequestParam Long gameId, @RequestParam String playerOUsername) {
         User playerO = userRepository.findByUserName(playerOUsername);
@@ -71,9 +75,9 @@ public class GameController {
         } catch (GameNotFoundException e) {
             return ResponseEntity.notFound().build();
   }
-//        catch (GameNotFoundException e) {
-//            return ResponseEntity.status(HttpStatus.CONFLICT).body("Game has already started");
-//        }
+        catch (GameAlreadyStartedException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        }
     }
 }
 
